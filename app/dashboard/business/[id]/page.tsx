@@ -1,15 +1,29 @@
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import QRCode from "qrcode";
 import Link from "next/link";
+import { authOptions } from "@/lib/auth";
 
 export default async function BusinessDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) redirect("/login");
+
   const { id } = await params;
-  const business = await prisma.business.findUnique({
-    where: { id },
+  const ownerId = (session.user as any).id;
+
+  // FIX: Only fetch business if it belongs to the logged-in user
+  const business = await prisma.business.findFirst({
+    where: { id, ownerId },
     include: { services: true, locations: true, analytics: true },
   });
 
-  if (!business) return <main className="p-10">Business not found</main>;
+  if (!business) return (
+    <main className="p-10">
+      <p className="text-gray-600">Business not found or you don&apos;t have access to it.</p>
+      <Link href="/dashboard" className="mt-4 inline-block text-brand-blue font-semibold">← Back to Dashboard</Link>
+    </main>
+  );
 
   const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
   const reviewPage = `${baseUrl}/r/${business.slug}`;

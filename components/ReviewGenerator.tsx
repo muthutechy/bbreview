@@ -36,6 +36,7 @@ export function ReviewGenerator({ business }: Props) {
   const formRef = useRef<HTMLFormElement | null>(null);
   const [loading, setLoading] = useState(false);
   const [reviews, setReviews] = useState<any>(null);
+  const [reviewTexts, setReviewTexts] = useState<{ short: string; medium: string; casual: string }>({ short: "", medium: "", casual: "" });
   const [sessionId, setSessionId] = useState("");
   const [selectedExp, setSelectedExp] = useState<string[]>([]);
   const [confirmed, setConfirmed] = useState(false);
@@ -73,6 +74,7 @@ export function ReviewGenerator({ business }: Props) {
     const form = new FormData(formRef.current);
     setLoading(true);
     setReviews(null);
+    setReviewTexts({ short: "", medium: "", casual: "" });
     setProgress(8);
 
     const payload = {
@@ -86,6 +88,8 @@ export function ReviewGenerator({ business }: Props) {
       tone: form.get("tone"),
       experiencePoints: selectedExp,
       staff: business.staff,
+      customerName: (form.get("customerName") as string)?.trim() || "",
+      customerArea: (form.get("customerArea") as string)?.trim() || "",
     };
 
     try {
@@ -101,6 +105,11 @@ export function ReviewGenerator({ business }: Props) {
       setTimeout(() => {
         if (data?.reviews) {
           setReviews(data.reviews);
+          setReviewTexts({
+            short: data.reviews.short || "",
+            medium: data.reviews.medium || "",
+            casual: data.reviews.casual || "",
+          });
           setSessionId(data.sessionId || "");
         } else {
           alert(data?.error || "Unable to generate review. Please try again.");
@@ -136,6 +145,22 @@ export function ReviewGenerator({ business }: Props) {
   return (
     <div className="space-y-6">
       <form ref={formRef} onSubmit={generate} className="card space-y-4">
+
+        {/* Customer Details */}
+        <div className="rounded-xl bg-orange-50 p-4 space-y-3">
+          <p className="font-bold text-sm text-orange-800">Your Details (helps personalise your review)</p>
+          <input
+            name="customerName"
+            className="input"
+            placeholder="Your Name (e.g. Ramesh, Priya) — optional"
+          />
+          <input
+            name="customerArea"
+            className="input"
+            placeholder="Your Area (e.g. Anna Nagar, Madurai) — optional"
+          />
+        </div>
+
         <select name="service" defaultValue={business.defaultService || ""} className="input" required>
           <option value="">Select service used</option>
           {business.services.map((s) => <option key={s}>{s}</option>)}
@@ -147,18 +172,18 @@ export function ReviewGenerator({ business }: Props) {
         </select>
 
         <select name="rating" className="input" required>
-          <option value="5">5 Stars</option>
-          <option value="4">4 Stars</option>
-          <option value="3">3 Stars</option>
-          <option value="2">2 Stars</option>
-          <option value="1">1 Star</option>
+          <option value="5">5 Stars ⭐⭐⭐⭐⭐</option>
+          <option value="4">4 Stars ⭐⭐⭐⭐</option>
+          <option value="3">3 Stars ⭐⭐⭐</option>
+          <option value="2">2 Stars ⭐⭐</option>
+          <option value="1">1 Star ⭐</option>
         </select>
 
         <div>
           <p className="mb-2 font-bold">Select your real experience</p>
           <div className="grid gap-2 md:grid-cols-2">
             {experienceOptions.map((x) => (
-              <label key={x} className="rounded-xl border bg-white p-3">
+              <label key={x} className="rounded-xl border bg-white p-3 cursor-pointer hover:bg-orange-50">
                 <input
                   type="checkbox"
                   className="mr-2"
@@ -192,7 +217,7 @@ export function ReviewGenerator({ business }: Props) {
           <option value="professional">Professional</option>
         </select>
 
-        <label className="block rounded-xl bg-orange-50 p-4 text-sm">
+        <label className="block rounded-xl bg-orange-50 p-4 text-sm cursor-pointer">
           <input type="checkbox" className="mr-2" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
           I confirm this review is based on my real experience.
         </label>
@@ -222,16 +247,18 @@ export function ReviewGenerator({ business }: Props) {
 
       {reviews && (
         <div className="space-y-4">
-          {["short", "medium", "casual"].map((type) => (
+          {(["short", "medium", "casual"] as const).map((type) => (
             <div className="card" key={type}>
               <h3 className="mb-3 text-lg font-bold capitalize">{type} Review</h3>
               <textarea
                 className="input min-h-28"
-                defaultValue={reviews[type] || ""}
-                onChange={(e) => (reviews[type] = e.target.value)}
+                value={reviewTexts[type]}
+                onChange={(e) =>
+                  setReviewTexts((prev) => ({ ...prev, [type]: e.target.value }))
+                }
               />
               <div className="mt-4 flex flex-wrap gap-3">
-                <button onClick={() => copyReview(reviews[type])} className="btn-primary">Copy Review</button>
+                <button onClick={() => copyReview(reviewTexts[type])} className="btn-primary">Copy Review</button>
                 <button onClick={() => generate()} className="btn-secondary" disabled={loading}>Regenerate</button>
               </div>
             </div>

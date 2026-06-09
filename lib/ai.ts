@@ -24,33 +24,37 @@ function dynamicFallback(input: {
   language: string;
   tone: string;
   length: string;
+  customerName?: string;
+  customerArea?: string;
 }) {
   const service = input.service || "service";
   const business = input.business || "this business";
   const location = input.location || "this area";
+  const name = input.customerName ? `— ${input.customerName}` : "";
+  const area = input.customerArea || location;
 
   const shortReviews = [
-    `I had a smooth experience with ${business}.`,
-    `Good service overall, the work was handled properly.`,
-    `Nice experience with ${service}. Everything went well.`,
-    `The team responded quickly and completed the work neatly.`,
-    `Satisfied with the service and the overall experience.`,
+    `Good experience with ${business}. The ${service} work was done properly. ${name}`,
+    `Really happy with the ${service} at ${business}. Quick and neat work. ${name}`,
+    `Satisfied with ${business}. The team handled the ${service} professionally. ${name}`,
+    `Great service from ${business} for ${service}. Would visit again. ${name}`,
+    `Smooth experience with ${business}. The ${service} was completed on time. ${name}`,
   ];
 
   const mediumReviews = [
-    `I had a good experience with ${business}. The team handled the ${service} work neatly and explained things clearly.`,
-    `The service was smooth from start to finish. They responded quickly and completed the work properly in ${location}.`,
-    `Overall, I’m happy with the experience. The team came on time, handled the work neatly, and there were no major issues.`,
-    `The ${service} work was done well. The staff were polite, explained the details clearly, and finished everything properly.`,
-    `Good experience overall. The team was responsive, the work quality was satisfying, and everything was handled in a simple way.`,
+    `I used ${business} for ${service} in ${area} and had a very good experience. The team came on time, completed the work neatly, and explained things clearly. Overall satisfied. ${name}`,
+    `Recently got ${service} done from ${business} and the service was really good. The staff was polite and the work quality was satisfying. ${name}`,
+    `The ${service} work by ${business} in ${area} was done properly. They responded quickly and the team was professional throughout. ${name}`,
+    `Got ${service} done from ${business} and the experience was smooth from start to finish. The team was helpful and completed everything neatly. ${name}`,
+    `${business} did a great job with ${service}. The team arrived on time, worked efficiently, and the results were exactly what I needed. ${name}`,
   ];
 
   const casualReviews = [
-    `Nice experience with ${business}. Work was done properly.`,
-    `Good service and quick response. Happy with it.`,
-    `Pretty smooth experience overall. No issues.`,
-    `The team was helpful and the work was neat.`,
-    `Good work, simple and professional service.`,
+    `Nice experience with ${business} for ${service}. Work was clean, team was helpful. ${name}`,
+    `Happy with the ${service} from ${business}. Simple and professional. ${name}`,
+    `Good work by ${business}. ${service} was done neatly and on time. ${name}`,
+    `The team at ${business} was friendly and got the ${service} done properly. ${name}`,
+    `Overall a good experience. ${business} handled the ${service} well. ${name}`,
   ];
 
   return {
@@ -74,8 +78,15 @@ async function runGPT(prompt: string) {
     messages: [
       {
         role: "system",
-        content:
-          "You are a natural customer review writing assistant. Your job is to help real customers express their real experience in simple, human-like language. Do not create fake claims. Do not write like marketing copy.",
+        content: `You are a natural customer review writing assistant. Your job is to help real customers express their genuine experience in simple, human-like language.
+
+STRICT RULES — follow every one of these:
+- NEVER use phrases like "I can't recommend enough", "I cannot recommend enough", "couldn't be happier", "second to none", "above and beyond" — these sound fake.
+- NEVER write negatives disguised as positives (e.g. "can't fault", "not disappointed").
+- ALWAYS use clear POSITIVE phrasing: "I highly recommend", "really happy with", "great experience", "satisfied with", "the work was done well".
+- Do NOT write fake claims. Only use the experience points provided.
+- Do NOT write like marketing copy or advertisements.
+- Write like a real local customer — simple, warm, direct.`,
       },
       {
         role: "user",
@@ -175,58 +186,51 @@ export async function generateReviews(input: {
   language: string;
   tone: string;
   length: string;
+  customerName?: string;
+  customerArea?: string;
 }) {
+  const nameTag = input.customerName ? `\nCustomer Name (use naturally at the end if it fits): ${input.customerName}` : "";
+  const areaTag = input.customerArea ? `\nCustomer Area (mention naturally): ${input.customerArea}` : "";
+
   const prompt = `
-Generate 3 fresh Google review options for a real customer.
+Generate 3 different Google review options for a real customer. Each review MUST sound different in structure and wording.
+
+CRITICAL PHRASING RULES:
+- NEVER use: "can't recommend enough", "cannot recommend enough", "couldn't be happier", "can't fault", "second to none", "above and beyond", "not disappointed"
+- ALWAYS use POSITIVE direct phrasing: "highly recommend", "really happy with", "great experience", "satisfied with", "the work was neat and professional"
+- NO double negatives. NO ambiguous phrases.
 
 MAIN GOAL:
-The review should sound like a real human customer and naturally help local SEO by mentioning the business type, service, and location.
+Sound like a real human customer. Naturally include business type, service, and location for local SEO — but do NOT keyword-stuff.
 
-IMPORTANT:
-- Use the business name naturally: ${input.business}
-- Use the service keyword naturally: ${input.service}
-- Use the location naturally: ${input.location}
-- Add human emotion when suitable: wow, wonderful, really happy, impressed, satisfied, good experience, helpful team, neat work.
-- Do NOT overdo keywords.
-- Do NOT sound like an advertisement.
-- Do NOT sound like AI.
-- Do NOT write too perfect corporate English.
-- Do NOT repeat the same sentence structure.
-- Do NOT invent fake details outside the selected experience points.
-- Make each review different.
-- Make it useful for Google review/local SEO, but still natural.
+BUSINESS DETAILS:
+- Business Name: ${input.business}
+- Service Used: ${input.service}
+- Location/Branch: ${input.location}
+- Rating: ${input.rating} stars${nameTag}${areaTag}
 
-CUSTOMER REAL EXPERIENCE POINTS:
-${input.experiencePoints.join(", ")}
+CUSTOMER EXPERIENCE POINTS (only use these — do not invent):
+${input.experiencePoints.length > 0 ? input.experiencePoints.join(", ") : "General positive experience"}
+
+LANGUAGE: ${input.language}
+TONE: ${input.tone}
+
+REVIEW TYPES:
+- Short: 1 clear positive sentence. Max 20 words. No name needed.
+- Medium: 2-3 sentences. Include service + location naturally. Can end with customer name if provided.
+- Casual: Friendly, conversational. Like texting a friend. Can include name at end.
+
+VARIETY REQUIREMENT: Each of the 3 reviews MUST use a different opening word/phrase. Do NOT start all three with "I".
 
 LANGUAGE RULES:
-- If language is English, write natural English.
-- If language is Tamil, write Tamil.
-- If language is Tanglish, write Tanglish.
-- If language is Hindi, Kannada, Malayalam, or Telugu, write that language.
-- Keep business/service/location keywords readable.
+- English: Natural Indian-English (not American/British corporate style)
+- Tamil: Pure Tamil script
+- Tanglish: Tamil words written in English letters mixed with English
+- Hindi/Other: That language
 
-STYLE:
-- Short review: 1 emotional natural sentence.
-- Medium review: 2 to 3 sentences with service + location.
-- Casual review: friendly, human, simple, slightly emotional.
+Random seed for variety: ${Date.now()}-${Math.random()}
 
-Business Name: ${input.business}
-Service Used: ${input.service}
-Location: ${input.location}
-Rating: ${input.rating}
-Language: ${input.language}
-Tone: ${input.tone}
-Review Length: ${input.length}
-
-EXAMPLES OF STYLE:
-- "Wow, really happy with EASYTECH for CCTV installation in Madurai. The team came on time and finished the work neatly."
-- "Wonderful experience with The Curtain Studio in Bengaluru. Their curtain installation service was neat, and the staff explained everything clearly."
-- "I’m really satisfied with the AC service in Madurai. Quick response, polite team, and the issue was solved properly."
-
-Random variation seed: ${Date.now()}-${Math.random()}
-
-Return JSON only:
+Return JSON only — no extra text:
 {
   "short": "",
   "medium": "",
@@ -238,10 +242,34 @@ Return JSON only:
   try {
     const result = await runGPTWithRetry(prompt);
 
+    // Post-process: catch any bad phrases that slipped through
+    const badPhrases = [
+      "can't recommend enough",
+      "cannot recommend enough",
+      "can't fault",
+      "couldn't be happier",
+      "second to none",
+      "above and beyond",
+      "not disappointed",
+    ];
+
+    let short = result.short || "";
+    let medium = result.medium || "";
+    let casual = result.casual || "";
+
+    const hasBadPhrase = (text: string) =>
+      badPhrases.some((p) => text.toLowerCase().includes(p.toLowerCase()));
+
+    // If bad phrase detected in any field, replace with fallback
+    const fallback = dynamicFallback(input);
+    if (hasBadPhrase(short)) short = fallback.short;
+    if (hasBadPhrase(medium)) medium = fallback.medium;
+    if (hasBadPhrase(casual)) casual = fallback.casual;
+
     return {
-      short: result.short || "",
-      medium: result.medium || "",
-      casual: result.casual || "",
+      short,
+      medium,
+      casual,
       warnings: result.warnings || [],
     };
   } catch (error) {

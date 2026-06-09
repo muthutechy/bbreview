@@ -3,10 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { generateReviews } from "@/lib/ai";
 
 function safeFallback(input: any) {
+  const name = input.customerName ? `— ${input.customerName}` : "";
   return {
-    short: `Good experience with ${input.service}. The work was done properly.`,
-    medium: `I had a good experience with ${input.businessName}. The team handled the ${input.service} work neatly and explained things clearly.`,
-    casual: `Nice experience overall. The work was clean and the team was helpful.`,
+    short: `Good experience with ${input.businessName}. The ${input.service} work was done properly. ${name}`.trim(),
+    medium: `I had a good experience with ${input.businessName}. The team handled the ${input.service} work neatly and explained things clearly. ${name}`.trim(),
+    casual: `Nice experience overall. The work was clean and the team was helpful. ${name}`.trim(),
     warnings: [],
   };
 }
@@ -44,6 +45,8 @@ export async function POST(req: Request) {
       language: body.language,
       tone: body.tone,
       length: body.length,
+      customerName: body.customerName || "",
+      customerArea: body.customerArea || "",
     });
   } catch (error) {
     console.log("AI review generation failed. Using fallback flow:", error);
